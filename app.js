@@ -22,7 +22,6 @@ const heroVideo = document.getElementById('director-video');
 if (heroVideo) {
  const frame = heroVideo.closest('.director-media');
  const fallback = document.querySelector('.director-video-fallback');
- const motion = matchMedia('(prefers-reduced-motion: reduce)');
  let pending = false;
  heroVideo.muted = true;
  heroVideo.defaultMuted = true;
@@ -30,7 +29,7 @@ if (heroVideo) {
  heroVideo.controls = false;
  const showFallback = () => { frame.classList.remove('is-playing'); fallback.hidden = false; };
  const tryPlay = (userInitiated = false) => {
-  if (document.hidden || (motion.matches && !userInitiated) || pending || !heroVideo.paused) return;
+  if (document.hidden || pending || !heroVideo.paused) return;
   heroVideo.muted = true;
   pending = true;
   const result = heroVideo.play();
@@ -47,8 +46,6 @@ if (heroVideo) {
  document.addEventListener('visibilitychange', () => {if(!document.hidden)tryPlay();});
  window.addEventListener('pageshow', () => tryPlay());
  if ('IntersectionObserver' in window) new IntersectionObserver(entries => {if(entries[0].isIntersecting)tryPlay();},{threshold:0.1}).observe(frame);
- motion.addEventListener('change', () => {if(motion.matches){heroVideo.pause();showFallback();}else tryPlay();});
- if (motion.matches) {heroVideo.autoplay = false;heroVideo.pause();}
  tryPlay();
 }
 
@@ -65,7 +62,6 @@ if (galleryToggle && galleryGrid) {
 }
 
 // Replay entry motion whenever a section returns to the viewport.
-const motionPreference = matchMedia('(prefers-reduced-motion: reduce)');
 const revealTargets = document.querySelectorAll('.story-inner > h2, .story-question, .story-cards, .section-heading, .signature-layout, .director-copy, .process-grid, .price-heading, .featured-price, .closing h2');
 const bookingTargets = document.querySelectorAll('.hero-actions a[href*="/booking"], .featured-amount a[href*="/booking"], .closing-actions a[href*="/booking"], .sticky-book');
 bookingTargets.forEach(element => element.classList.add('booking-accent'));
@@ -73,14 +69,11 @@ if ('IntersectionObserver' in window) {
  const motionObserver = new IntersectionObserver(entries => {
   entries.forEach(entry => {
    const className = entry.target.classList.contains('booking-accent') ? 'booking-arrived' : 'is-revealed';
-   entry.target.classList.toggle(className, entry.isIntersecting && !motionPreference.matches);
+   entry.target.classList.toggle(className, entry.isIntersecting);
   });
  }, {threshold:0.12});
  revealTargets.forEach(element => {element.classList.add('motion-reveal');motionObserver.observe(element);});
  bookingTargets.forEach(element => motionObserver.observe(element));
- motionPreference.addEventListener('change', () => {
-  if(motionPreference.matches) document.querySelectorAll('.is-revealed,.booking-arrived').forEach(element=>element.classList.remove('is-revealed','booking-arrived'));
- });
 }
 
 
@@ -89,14 +82,11 @@ if (consultationVideo) {
  const frame=consultationVideo.closest('.consultation-film');
  const fallback=frame.querySelector('.consultation-fallback');
  const fallbackImage=fallback.querySelector('img');
- const preference=matchMedia('(prefers-reduced-motion: reduce)');
  let inView=false;
- const poster=consultationVideo.poster;
  const animated=fallbackImage.getAttribute('src');
- const fallbackState=()=>{frame.classList.remove('is-playing');fallback.hidden=false;fallbackImage.src=preference.matches?poster:animated;};
+ const fallbackState=()=>{frame.classList.remove('is-playing');fallback.hidden=false;fallbackImage.src=animated;};
  const sync=()=>{
-  const stopped=preference.matches;
-  if(stopped||!inView||document.hidden){consultationVideo.pause();fallbackState();return;}
+  if(!inView||document.hidden){consultationVideo.pause();fallbackState();return;}
   consultationVideo.muted=true;
   consultationVideo.play().catch(fallbackState);
  };
@@ -107,7 +97,6 @@ if (consultationVideo) {
  else{inView=true;sync();}
  document.addEventListener('visibilitychange',sync);
  document.addEventListener('touchend',()=>{sync();},{passive:true});
- preference.addEventListener('change',sync);
  sync();
 }
 
@@ -115,11 +104,10 @@ if (consultationVideo) {
 const slideshow = document.querySelector('.hero-slideshow');
 if (slideshow) {
  const slides = [...slideshow.querySelectorAll('.hero-slide')];
- const reduced = matchMedia('(prefers-reduced-motion: reduce)');
- let index = 0, timer, ready = false, paused = reduced.matches;
+ let index = 0, timer, ready = false;
  const sync = () => {
   clearInterval(timer);
-  if (!ready || paused || document.hidden) return;
+  if (!ready || document.hidden) return;
   timer = setInterval(() => {
    const next = (index + 1) % slides.length;
    if (!slides[next].complete || !slides[next].naturalWidth) return;
@@ -128,7 +116,6 @@ if (slideshow) {
    index = next;
   }, 3000);
  };
- reduced.addEventListener('change', () => {paused = reduced.matches; sync();});
  document.addEventListener('visibilitychange', sync);
  Promise.allSettled(slides.map(img => img.decode())).then(() => {ready = true; sync();});
  sync();
